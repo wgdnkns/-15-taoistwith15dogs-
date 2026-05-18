@@ -1,0 +1,20 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "PPP",
+    "PCP",
+    "PPP"
+  ],
+  "key": {
+    "P": {
+      "item": "minecraft:paper"
+    },
+    "C": {
+      "item": "taoist_with_15_dogs:cinnabar"
+    }
+  },
+  "result": {
+    "id": "taoist_with_15_dogs:yellow_talisman",
+    "count": 4
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    " S ",
+    " SJ",
+    " # "
+  ],
+  "key": {
+    "S": {
+      "item": "minecraft:cherry_planks"
+    },
+    "J": {
+      "item": "taoist_with_15_dogs:cinnabar"
+    },
+    "#": {
+      "item": "minecraft:stick"
+    }
+  },
+  "result": {
+    "id": "taoist_with_15_dogs:taoist_sword",
+    "count": 1
+  }
+}
