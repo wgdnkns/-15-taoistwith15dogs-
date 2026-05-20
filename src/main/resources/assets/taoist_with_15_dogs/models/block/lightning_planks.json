@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:block/cube_all",
+  "textures": {
+    "all": "taoist_with_15_dogs:block/lightning_planks"
+  }
+}

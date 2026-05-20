@@ -1,0 +1,23 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "LLL",
+    "LSL",
+    "LCL"
+  ],
+  "key": {
+    "L": {
+      "item": "taoist_with_15_dogs:lightning_planks"
+    },
+    "S": {
+      "item": "taoist_with_15_dogs:taoist_sword"
+    },
+    "C": {
+      "item": "taoist_with_15_dogs:cinnabar"
+    }
+  },
+  "result": {
+    "id": "taoist_with_15_dogs:lightning_taoist_sword",
+    "count": 1
+  }
+}

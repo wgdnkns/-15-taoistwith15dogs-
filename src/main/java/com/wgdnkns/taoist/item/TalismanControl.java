@@ -1,5 +1,9 @@
 package com.wgdnkns.taoist.item;
 
+import net.minecraft.tags.EntityTypeTags;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.Tag;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EquipmentSlot;
@@ -9,7 +13,9 @@ import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.goal.OpenDoorGoal;
 import net.minecraft.world.entity.ai.navigation.GroundPathNavigation;
+import net.minecraft.world.entity.monster.Drowned;
 import net.minecraft.world.entity.monster.WitherSkeleton;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.InteractionHand;
@@ -33,7 +39,10 @@ public final class TalismanControl {
     public static final String TALISMAN_TAG = "taoist_with_15_dogs_talisman";
     public static final String OWNER_TAG_PREFIX = "taoist_with_15_dogs_owner_";
     public static final String COMMAND_TARGET_TAG_PREFIX = "taoist_with_15_dogs_cmd_";
+    public static final String SELECTED_FOLLOWER_TAG = "taoist_with_15_dogs_selected_follower";
     public static final String DOOR_GOAL_TAG = "taoist_with_15_dogs_open_door";
+    public static final String TALISMAN_SLOT_TAG = "taoist_with_15_dogs_talisman_item";
+    public static final String INVENTORY_TAG = "taoist_with_15_dogs_inventory";
     private static final String DIG_LAST_BREAK_TICK = "taoist_with_15_dogs_dig_last_break";
     private static final int DIG_COOLDOWN_TICKS = 30;
     public static final ResourceLocation BUFF_HEALTH_ID = ResourceLocation.fromNamespaceAndPath("taoist_with_15_dogs", "talisman_health");
@@ -41,6 +50,15 @@ public final class TalismanControl {
     public static final ResourceLocation BUFF_SPEED_ID = ResourceLocation.fromNamespaceAndPath("taoist_with_15_dogs", "talisman_speed");
 
     private TalismanControl() {
+    }
+
+    public static boolean isControllableType(Mob mob) {
+        return mob.getType().is(EntityTypeTags.UNDEAD);
+    }
+
+    public static void forceFollowOwner(Mob mob, Player owner) {
+        mob.getNavigation().moveTo(owner, 1.1);
+        mob.setTarget(null);
     }
 
     public static String ownerTag(UUID owner) {
@@ -69,7 +87,47 @@ public final class TalismanControl {
         return null;
     }
 
+    public static ItemStack getTalismanItem(Mob mob) {
+        var tag = mob.getPersistentData().getCompound(TALISMAN_SLOT_TAG);
+        if (tag.isEmpty()) return ItemStack.EMPTY;
+        var result = ItemStack.parse(mob.registryAccess(), tag);
+        return result.orElse(ItemStack.EMPTY);
+    }
+
+    public static void setTalismanItem(Mob mob, ItemStack stack) {
+        if (stack.isEmpty()) {
+            mob.getPersistentData().remove(TALISMAN_SLOT_TAG);
+        } else {
+            mob.getPersistentData().put(TALISMAN_SLOT_TAG, stack.save(mob.registryAccess()));
+        }
+    }
+
+    /** 将物品放入符兵的 INVENTORY_TAG 第一个空位 (用于右键贴符时同步到箱子) */
+    public static void addItemToInventory(Mob mob, ItemStack stack) {
+        var data = mob.getPersistentData();
+        ListTag list;
+        if (data.contains(INVENTORY_TAG, Tag.TAG_LIST)) {
+            list = data.getList(INVENTORY_TAG, Tag.TAG_COMPOUND);
+        } else {
+            list = new ListTag();
+            for (int i = 0; i < 27; i++) list.add(new CompoundTag());
+        }
+        for (int i = 0; i < list.size(); i++) {
+            if (list.getCompound(i).isEmpty()) {
+                list.set(i, stack.save(mob.registryAccess()));
+                break;
+            }
+        }
+        data.put(INVENTORY_TAG, list);
+    }
+
     public static boolean isControlledByAnyPlayer(LivingEntity entity, Item talismanItem) {
+        if (entity instanceof Mob mob) {
+            ItemStack talismanStack = getTalismanItem(mob);
+            if (talismanStack.is(talismanItem) && entity.getTags().contains(TALISMAN_TAG) && getOwnerUuid(entity) != null) {
+                return true;
+            }
+        }
         ItemStack head = entity.getItemBySlot(EquipmentSlot.HEAD);
         return head.is(talismanItem) && entity.getTags().contains(TALISMAN_TAG) && getOwnerUuid(entity) != null;
     }
@@ -109,10 +167,35 @@ public final class TalismanControl {
         return null;
     }
 
+    public static void setSelectedFollower(Entity entity, UUID followerUuid) {
+        entity.removeTag(SELECTED_FOLLOWER_TAG);
+        if (followerUuid != null) {
+            entity.addTag(SELECTED_FOLLOWER_TAG + followerUuid);
+        }
+    }
+
+    public static UUID getSelectedFollowerUuid(Entity entity) {
+        for (String tag : entity.getTags()) {
+            if (tag.startsWith(SELECTED_FOLLOWER_TAG)) {
+                String value = tag.substring(SELECTED_FOLLOWER_TAG.length());
+                try {
+                    return UUID.fromString(value);
+                } catch (IllegalArgumentException ignored) {
+                    return null;
+                }
+            }
+        }
+        return null;
+    }
+
     public static void applyBuffs(Mob mob) {
         applyPermanentModifier(mob.getAttribute(Attributes.MAX_HEALTH), BUFF_HEALTH_ID, 2.0);
         applyPermanentModifier(mob.getAttribute(Attributes.ATTACK_DAMAGE), BUFF_ATTACK_ID, 2.0);
         applyPermanentModifier(mob.getAttribute(Attributes.MOVEMENT_SPEED), BUFF_SPEED_ID, 0.05);
+        if (mob instanceof Drowned) {
+            applyPermanentModifier(mob.getAttribute(Attributes.ATTACK_DAMAGE), ResourceLocation.fromNamespaceAndPath("taoist_with_15_dogs", "drowned_attack"), 1.0);
+            applyPermanentModifier(mob.getAttribute(Attributes.WATER_MOVEMENT_EFFICIENCY), ResourceLocation.fromNamespaceAndPath("taoist_with_15_dogs", "drowned_water_speed"), 0.3);
+        }
         mob.setHealth(mob.getMaxHealth());
     }
 
@@ -120,9 +203,10 @@ public final class TalismanControl {
         if (mob.getTags().contains(DOOR_GOAL_TAG)) {
             return;
         }
-        if (mob.getNavigation() instanceof GroundPathNavigation navigation) {
-            navigation.setCanOpenDoors(true);
-            navigation.setCanPassDoors(true);
+        var nav = mob.getNavigation();
+        if (nav instanceof GroundPathNavigation groundNav) {
+            groundNav.setCanOpenDoors(true);
+            groundNav.setCanPassDoors(true);
         }
         mob.goalSelector.addGoal(1, new OpenDoorGoal(mob, true));
         mob.addTag(DOOR_GOAL_TAG);
@@ -130,10 +214,10 @@ public final class TalismanControl {
 
     @SuppressWarnings("resource")
     public static void tickWitherSkeletonDig(Mob mob) {
-        if (!(mob instanceof WitherSkeleton)) {
+        if (!(mob.level() instanceof ServerLevel level)) {
             return;
         }
-        if (!(mob.level() instanceof ServerLevel level)) {
+        if (!(mob instanceof WitherSkeleton)) {
             return;
         }
         if (mob.getNavigation() instanceof GroundPathNavigation navigation) {

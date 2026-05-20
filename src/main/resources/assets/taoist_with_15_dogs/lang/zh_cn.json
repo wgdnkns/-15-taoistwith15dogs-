@@ -4,6 +4,16 @@
   "item.taoist_with_15_dogs.cinnabar": "朱砂",
   "item.taoist_with_15_dogs.yellow_talisman": "黄符",
   "item.taoist_with_15_dogs.sanqing_bell": "三清铃",
+  "item.taoist_with_15_dogs.copper_coin": "铜钱",
+  "item.taoist_with_15_dogs.copper_coin_sword": "铜钱剑",
   "item.taoist_with_15_dogs.taoist_sword.lore1": "一把能对抗邪祟的武器",
-  "item.taoist_with_15_dogs.taoist_sword.lore2": "对亡灵生物造成额外伤害"
+  "item.taoist_with_15_dogs.taoist_sword.lore2": "对亡灵生物造成额外伤害",
+  "block.taoist_with_15_dogs.lightning_wood": "雷击木",
+  "block.taoist_with_15_dogs.lightning_planks": "雷击木板",
+  "item.taoist_with_15_dogs.bagua_mirror": "八卦镜",
+  "item.taoist_with_15_dogs.lightning_taoist_sword": "雷电桃木剑",
+  "message.taoist_with_15_dogs.cancel_mass_attack": "已取消群攻",
+  "message.taoist_with_15_dogs.target_selected": "已下达攻击指令",
+  "message.taoist_with_15_dogs.no_followers": "你没有符兵",
+  "container.taoist_with_15_dogs.follower": "符兵装备"
 }

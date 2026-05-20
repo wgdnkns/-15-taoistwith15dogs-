@@ -4,6 +4,8 @@
   "compatibilityLevel": "JAVA_17",
   "refmap": "taoist_with_15_dogs.refmap.json",
   "mixins": [
+    "DrownedMixin",
+    "DrownedOkTargetMixin",
     "LivingEntityMixin",
     "MobMixin"
   ],

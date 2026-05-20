@@ -1,0 +1,7 @@
+{
+  "parent": "minecraft:block/cube_column",
+  "textures": {
+    "end": "taoist_with_15_dogs:block/lightning_wood_top",
+    "side": "taoist_with_15_dogs:block/lightning_wood"
+  }
+}

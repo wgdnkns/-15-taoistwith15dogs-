@@ -6,14 +6,20 @@ import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.RenderStateShard;
+import net.minecraft.client.renderer.entity.EntityRenderers;
+import net.minecraft.client.renderer.entity.ItemRenderer;
+import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.core.particles.DustParticleOptions;
 import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.entity.projectile.ProjectileUtil;
 import net.minecraft.world.phys.EntityHitResult;
@@ -23,8 +29,15 @@ import org.joml.Vector3f;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
+import net.neoforged.neoforge.client.event.RegisterColorHandlersEvent;
+import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
+
+import com.wgdnkns.taoist.client.ThrownCopperCoinSwordRenderer;
+import com.wgdnkns.taoist.client.gui.FollowerScreen;
+import com.wgdnkns.taoist.item.TalismanControl;
 
 import java.util.function.Consumer;
 
@@ -32,15 +45,53 @@ import java.util.function.Consumer;
 @SuppressWarnings("resource")
 public class Taoistwith15dogsClient {
 
+    @SubscribeEvent
+    public static void onClientSetup(FMLClientSetupEvent event) {
+        EntityRenderers.register(Taoistwith15dogs.THROWN_COPPER_COIN_SWORD.get(), ThrownCopperCoinSwordRenderer::new);
+    }
+
+    @SubscribeEvent
+    public static void registerScreens(RegisterMenuScreensEvent event) {
+        event.register(Taoistwith15dogs.FOLLOWER_MENU.get(), FollowerScreen::new);
+    }
+
+    @SubscribeEvent
+    public static void onRegisterItemColors(RegisterColorHandlersEvent.Item event) {
+        event.register((stack, tintIndex) -> {
+            if (tintIndex != 0) return -1;
+            float phase = (System.currentTimeMillis() % 3000) / 3000.0F;
+            float pulse = 0.55F + 0.45F * Mth.sin(phase * Mth.PI * 2);
+            int alpha = Math.min(255, (int)(pulse * 255));
+            return (alpha << 24) | 0xFFFFFF;
+        }, Taoistwith15dogs.LIGHTNING_TAOIST_SWORD.get());
+
+        event.register((stack, tintIndex) -> {
+            return 0xB3FFFFFF;
+        }, Taoistwith15dogs.YELLOW_TALISMAN.get());
+    }
+
     private static final double COMMAND_RANGE = 32.0;
     private static int particleTickCounter = 0;
-    private static final int PARTICLE_INTERVAL = 10; // 每10个tick生成一次粒子（约0.5秒）
+    private static final int PARTICLE_INTERVAL = 10;
     private static boolean lastBellCooldown = false;
-    private static int lastBellCommandedEntityId = -1;
-    private static long lastBellCommandedGameTime = 0L;
-    private static final long BELL_COMMAND_HIDE_TICKS = 200L;
+    private static boolean lastLightningCooldown = false;
     private static final RenderType SOLID_ARROW = RenderType.create(
             "taoist_with_15_dogs_solid_arrow",
+            DefaultVertexFormat.POSITION_COLOR,
+            VertexFormat.Mode.TRIANGLES,
+            256,
+            false,
+            true,
+            RenderType.CompositeState.builder()
+                    .setShaderState(RenderStateShard.POSITION_COLOR_SHADER)
+                    .setTransparencyState(RenderStateShard.TRANSLUCENT_TRANSPARENCY)
+                    .setCullState(RenderStateShard.NO_CULL)
+                    .setDepthTestState(RenderStateShard.LEQUAL_DEPTH_TEST)
+                    .setWriteMaskState(RenderStateShard.COLOR_DEPTH_WRITE)
+                    .createCompositeState(false)
+    );
+    private static final RenderType BLUE_SOLID_ARROW = RenderType.create(
+            "taoist_with_15_dogs_blue_solid_arrow",
             DefaultVertexFormat.POSITION_COLOR,
             VertexFormat.Mode.TRIANGLES,
             256,
@@ -75,8 +126,6 @@ public class Taoistwith15dogsClient {
         }
     }
 
-    // 移除了构造器中的配置屏幕注册代码
-
     @SubscribeEvent
     public static void onClientTick(ClientTickEvent.Post event) {
         withContext(context -> {
@@ -91,17 +140,29 @@ public class Taoistwith15dogsClient {
                 if (hit instanceof EntityHitResult entityHitResult) {
                     Entity entity = entityHitResult.getEntity();
                     if (entity instanceof LivingEntity living && living != player) {
-                        lastBellCommandedEntityId = living.getId();
-                        lastBellCommandedGameTime = level.getGameTime();
                     }
                 }
             }
             lastBellCooldown = bellCooldownNow;
 
+            boolean lightningCooldownNow = player.getCooldowns().isOnCooldown(Taoistwith15dogs.LIGHTNING_TAOIST_SWORD.get());
+            if (lightningCooldownNow && !lastLightningCooldown) {
+                HitResult hit = ProjectileUtil.getHitResultOnViewVector(player, entity -> entity instanceof LivingEntity && entity != player, COMMAND_RANGE);
+                if (hit instanceof EntityHitResult entityHitResult) {
+                    Entity entity = entityHitResult.getEntity();
+                    if (entity instanceof LivingEntity living && living != player) {
+                    }
+                }
+            }
+            lastLightningCooldown = lightningCooldownNow;
+
             boolean hasTaoistSword = mainHandItem.is(Taoistwith15dogs.TAOIST_SWORD.get())
                     || offHandItem.is(Taoistwith15dogs.TAOIST_SWORD.get());
 
-            if (!hasTaoistSword) {
+            boolean hasLightningSword = mainHandItem.is(Taoistwith15dogs.LIGHTNING_TAOIST_SWORD.get())
+                    || offHandItem.is(Taoistwith15dogs.LIGHTNING_TAOIST_SWORD.get());
+
+            if (!hasTaoistSword && !hasLightningSword) {
                 particleTickCounter = 0;
                 return;
             }
@@ -113,23 +174,54 @@ public class Taoistwith15dogsClient {
             particleTickCounter = 0;
 
             RandomSource random = player.getRandom();
-            DustParticleOptions pinkDust = new DustParticleOptions(
-                    new Vector3f(1.0F, 0.4F, 0.7F),
-                    1.0F
-            );
 
-            for (int i = 0; i < 4; i++) {
-                double xOffset = (random.nextDouble() - 0.5) * 0.6;
-                double yOffset = random.nextDouble() * 1.5;
-                double zOffset = (random.nextDouble() - 0.5) * 0.6;
-
-                level.addParticle(
-                        pinkDust,
-                        player.getX() + xOffset,
-                        player.getY() + yOffset,
-                        player.getZ() + zOffset,
-                        0, 0.03, 0
+            if (hasTaoistSword) {
+                DustParticleOptions pinkDust = new DustParticleOptions(
+                        new Vector3f(1.0F, 0.4F, 0.7F),
+                        1.0F
                 );
+
+                for (int i = 0; i < 4; i++) {
+                    double xOffset = (random.nextDouble() - 0.5) * 0.6;
+                    double yOffset = random.nextDouble() * 1.5;
+                    double zOffset = (random.nextDouble() - 0.5) * 0.6;
+
+                    level.addParticle(
+                            pinkDust,
+                            player.getX() + xOffset,
+                            player.getY() + yOffset,
+                            player.getZ() + zOffset,
+                            0, 0.03, 0
+                    );
+                }
+            }
+
+            if (hasLightningSword) {
+                DustParticleOptions yellowDust = new DustParticleOptions(
+                        new Vector3f(1.0F, 1.0F, 0.2F),
+                        1.0F
+                );
+                DustParticleOptions whiteDust = new DustParticleOptions(
+                        new Vector3f(0.8F, 0.8F, 1.0F),
+                        1.0F
+                );
+
+                for (int i = 0; i < 6; i++) {
+                    double xOffset = (random.nextDouble() - 0.5) * 0.8;
+                    double yOffset = random.nextDouble() * 1.8;
+                    double zOffset = (random.nextDouble() - 0.5) * 0.8;
+                    DustParticleOptions dust = random.nextBoolean() ? yellowDust : whiteDust;
+
+                    level.addParticle(
+                            dust,
+                            player.getX() + xOffset,
+                            player.getY() + yOffset,
+                            player.getZ() + zOffset,
+                            (random.nextDouble() - 0.5) * 0.05,
+                            0.05,
+                            (random.nextDouble() - 0.5) * 0.05
+                    );
+                }
             }
         });
     }
@@ -139,7 +231,10 @@ public class Taoistwith15dogsClient {
         if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_ENTITIES) {
             return;
         }
-        withContext(context -> renderArrow(event, context));
+        withContext(context -> {
+            renderArrow(event, context);
+            renderTalismansOnHeads(event, context);
+        });
     }
 
     private static void renderArrow(RenderLevelStageEvent event, ClientContext context) {
@@ -148,10 +243,20 @@ public class Taoistwith15dogsClient {
         ItemStack offHandItem = player.getOffhandItem();
         boolean hasSanqingBell = mainHandItem.is(Taoistwith15dogs.SANQING_BELL.get())
                 || offHandItem.is(Taoistwith15dogs.SANQING_BELL.get());
-        if (!hasSanqingBell) {
+        boolean hasLightningSword = mainHandItem.is(Taoistwith15dogs.LIGHTNING_TAOIST_SWORD.get())
+                || offHandItem.is(Taoistwith15dogs.LIGHTNING_TAOIST_SWORD.get());
+        if (!hasSanqingBell && !hasLightningSword) {
             return;
         }
-        if (player.getCooldowns().isOnCooldown(Taoistwith15dogs.SANQING_BELL.get())) {
+
+        boolean cooldownActive = false;
+        if (hasSanqingBell && player.getCooldowns().isOnCooldown(Taoistwith15dogs.SANQING_BELL.get())) {
+            cooldownActive = true;
+        }
+        if (hasLightningSword && player.getCooldowns().isOnCooldown(Taoistwith15dogs.LIGHTNING_TAOIST_SWORD.get())) {
+            cooldownActive = true;
+        }
+        if (cooldownActive) {
             return;
         }
 
@@ -166,16 +271,17 @@ public class Taoistwith15dogsClient {
         if (living == player) {
             return;
         }
-        if (shouldHideArrowForCommandedTarget(context.level().getGameTime(), living)) {
+
+        // 被控制生物不显示箭头
+        if (living instanceof Mob mob && mob.getTags().contains(TalismanControl.TALISMAN_TAG)) {
             return;
         }
 
         float partial = event.getPartialTick().getGameTimeDeltaPartialTick(true);
         float time = (context.level().getGameTime() + partial) * 0.35F;
         float alpha = 0.45F + 0.55F * (0.5F + 0.5F * Mth.sin(time));
-        float green = 0.02F + 0.08F * (0.5F + 0.5F * Mth.sin(time * 1.7F));
-        float blue = 0.02F + 0.08F * (0.5F + 0.5F * Mth.sin(time * 1.3F));
-        float red = 1.0F;
+
+        boolean isLightning = hasLightningSword && !hasSanqingBell;
 
         Vec3 camPos = event.getCamera().getPosition();
         Vec3 pos = living.getPosition(partial);
@@ -188,17 +294,53 @@ public class Taoistwith15dogsClient {
         poseStack.translate(x - camPos.x, y - camPos.y, z - camPos.z);
         poseStack.mulPose(event.getCamera().rotation());
         var bufferSource = context.minecraft().renderBuffers().bufferSource();
-        VertexConsumer buffer = bufferSource.getBuffer(SOLID_ARROW);
-        drawSolidDownArrow(poseStack, buffer, red, green, blue, alpha);
-        bufferSource.endBatch(SOLID_ARROW);
+
+        if (isLightning) {
+            VertexConsumer buffer = bufferSource.getBuffer(BLUE_SOLID_ARROW);
+            drawSolidDownArrow(poseStack, buffer, 0.2F, 0.4F + 0.4F * (0.5F + 0.5F * Mth.sin(time * 1.3F)), 1.0F, alpha);
+            bufferSource.endBatch(BLUE_SOLID_ARROW);
+        } else {
+            VertexConsumer buffer = bufferSource.getBuffer(SOLID_ARROW);
+            drawSolidDownArrow(poseStack, buffer, 1.0F, 0.02F + 0.08F * (0.5F + 0.5F * Mth.sin(time * 1.7F)), 0.02F + 0.08F * (0.5F + 0.5F * Mth.sin(time * 1.3F)), alpha);
+            bufferSource.endBatch(SOLID_ARROW);
+        }
         poseStack.popPose();
     }
 
-    private static boolean shouldHideArrowForCommandedTarget(long gameTime, LivingEntity target) {
-        if (lastBellCommandedEntityId != target.getId()) {
-            return false;
+    private static void renderTalismansOnHeads(RenderLevelStageEvent event, ClientContext context) {
+        Vec3 camPos = event.getCamera().getPosition();
+        float partial = event.getPartialTick().getGameTimeDeltaPartialTick(true);
+        Minecraft mc = context.minecraft();
+        ItemRenderer itemRenderer = mc.getItemRenderer();
+        ItemStack talismanStack = new ItemStack(Taoistwith15dogs.YELLOW_TALISMAN.get());
+        var bufferSource = mc.renderBuffers().bufferSource();
+        PoseStack poseStack = event.getPoseStack();
+
+        // 完全光照: (天空15<<20)|(方块15<<4) = 15728880
+        int fullBright = 15728880;
+
+        for (Mob mob : context.level().getEntitiesOfClass(Mob.class, context.player().getBoundingBox().inflate(COMMAND_RANGE))) {
+            if (!mob.getTags().contains(TalismanControl.TALISMAN_TAG)) continue;
+            if (!mob.isAlive()) continue;
+
+            Vec3 pos = mob.getPosition(partial);
+            // 在脸部正前方 (眼睛高度 + 前推半格)
+            double y = pos.y + mob.getEyeHeight();
+
+            poseStack.pushPose();
+            poseStack.translate(pos.x - camPos.x, y - camPos.y, pos.z - camPos.z);
+
+            // 始终面向摄像机 (billboard)
+            poseStack.mulPose(event.getCamera().rotation());
+            // 在脸部前方 (Z轴朝向摄像机, -Z = 前进)
+            poseStack.translate(0.0, 0.0, -0.35);
+            poseStack.scale(0.5F, 0.5F, 0.5F);
+
+            itemRenderer.renderStatic(talismanStack, ItemDisplayContext.FIXED, fullBright, OverlayTexture.NO_OVERLAY, poseStack, bufferSource, mc.level, 0);
+
+            poseStack.popPose();
         }
-        return gameTime - lastBellCommandedGameTime <= BELL_COMMAND_HIDE_TICKS;
+        bufferSource.endBatch();
     }
 
     private static void drawSolidDownArrow(PoseStack poseStack,

@@ -4,6 +4,16 @@
   "item.taoist_with_15_dogs.cinnabar": "Cinnabar",
   "item.taoist_with_15_dogs.yellow_talisman": "Yellow Talisman",
   "item.taoist_with_15_dogs.sanqing_bell": "Sanqing Bell",
+  "item.taoist_with_15_dogs.copper_coin": "Copper Coin",
+  "item.taoist_with_15_dogs.copper_coin_sword": "Copper Coin Sword",
   "item.taoist_with_15_dogs.taoist_sword.lore1": "A weapon that can fight against evil spirits",
-  "item.taoist_with_15_dogs.taoist_sword.lore2": "Deals extra damage to undead creatures"
+  "item.taoist_with_15_dogs.taoist_sword.lore2": "Deals extra damage to undead creatures",
+  "block.taoist_with_15_dogs.lightning_wood": "Lightning Wood",
+  "block.taoist_with_15_dogs.lightning_planks": "Lightning Planks",
+  "item.taoist_with_15_dogs.bagua_mirror": "Bagua Mirror",
+  "item.taoist_with_15_dogs.lightning_taoist_sword": "Lightning Taoist Sword",
+  "message.taoist_with_15_dogs.cancel_mass_attack": "Mass attack cancelled",
+  "message.taoist_with_15_dogs.target_selected": "Attack order issued",
+  "message.taoist_with_15_dogs.no_followers": "You have no followers",
+  "container.taoist_with_15_dogs.follower": "Follower Equipment"
 }

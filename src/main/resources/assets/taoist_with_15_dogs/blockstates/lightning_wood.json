@@ -1,0 +1,7 @@
+{
+  "variants": {
+    "axis=x": {"model": "taoist_with_15_dogs:block/lightning_wood_horizontal", "x": 90, "y": 90},
+    "axis=y": {"model": "taoist_with_15_dogs:block/lightning_wood"},
+    "axis=z": {"model": "taoist_with_15_dogs:block/lightning_wood_horizontal", "x": 90}
+  }
+}

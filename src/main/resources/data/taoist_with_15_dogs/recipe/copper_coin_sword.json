@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    " C ",
+    " C ",
+    " C "
+  ],
+  "key": {
+    "C": {
+      "item": "taoist_with_15_dogs:copper_coin"
+    }
+  },
+  "result": {
+    "id": "taoist_with_15_dogs:copper_coin_sword",
+    "count": 1
+  }
+}
