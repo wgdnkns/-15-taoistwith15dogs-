@@ -156,6 +156,8 @@ public class FollowerMenu extends AbstractContainerMenu {
             follower.removeTag(TalismanControl.TALISMAN_TAG);
             follower.setTarget(null);
             follower.getNavigation().stop();
+            follower.setCustomName(null);
+            follower.setCustomNameVisible(false);
 
             var healthAttr = follower.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.MAX_HEALTH);
             if (healthAttr != null) healthAttr.removeModifier(TalismanControl.BUFF_HEALTH_ID);

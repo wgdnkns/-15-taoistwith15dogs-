@@ -26,6 +26,11 @@ public class CopperCoinSwordItem extends Item {
     }
 
     @Override
+    public int getEnchantmentValue() {
+        return 15;
+    }
+
+    @Override
     public UseAnim getUseAnimation(ItemStack stack) {
         return UseAnim.SPEAR;
     }

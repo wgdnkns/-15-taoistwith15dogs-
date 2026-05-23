@@ -3,6 +3,7 @@ package com.wgdnkns.taoist;
 import com.wgdnkns.taoist.client.gui.FollowerMenu;
 import com.wgdnkns.taoist.entity.ThrownCopperCoinSword;
 import com.wgdnkns.taoist.item.BaguaMirrorItem;
+import com.wgdnkns.taoist.item.CinnabarItem;
 import com.wgdnkns.taoist.item.CopperCoinSwordItem;
 import com.wgdnkns.taoist.item.LightningTaoistSwordItem;
 import com.wgdnkns.taoist.item.SanqingBellItem;
@@ -13,12 +14,15 @@ import com.wgdnkns.taoist.network.SelectedFollowerPayload;
 import com.wgdnkns.taoist.network.TalismanSyncHandler;
 import net.minecraft.ChatFormatting;
 import net.minecraft.nbt.Tag;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.component.DataComponents;
-import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.sounds.SoundEvent;
 import net.minecraft.world.SimpleMenuProvider;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.LightningBolt;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.EquipmentSlot;
@@ -34,22 +38,23 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.flag.FeatureFlags;
 import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.item.*;
+import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.component.ItemAttributeModifiers;
 import net.minecraft.world.item.component.ItemLore;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.RotatedPillarBlock;
 import net.minecraft.world.level.block.state.BlockBehaviour;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.Level;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.Mod;
-import net.neoforged.fml.config.ModConfig;
 import net.neoforged.fml.ModContainer;
-import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
+import net.neoforged.fml.common.Mod;
 import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
 import net.neoforged.neoforge.event.entity.living.LivingChangeTargetEvent;
 import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
@@ -79,22 +84,36 @@ public class Taoistwith15dogs {
     public static final DeferredRegister<EntityType<?>> ENTITY_TYPES = DeferredRegister.create(Registries.ENTITY_TYPE, MODID);
     public static final DeferredRegister<CreativeModeTab> CREATIVE_MODE_TABS = DeferredRegister.create(Registries.CREATIVE_MODE_TAB, MODID);
     public static final DeferredRegister<MenuType<?>> MENUS = DeferredRegister.create(Registries.MENU, MODID);
+    public static final DeferredRegister<SoundEvent> SOUND_EVENTS = DeferredRegister.create(Registries.SOUND_EVENT, MODID);
+
+    public static final DeferredHolder<SoundEvent, SoundEvent> SANQING_BELL_SOUND = SOUND_EVENTS.register("sanqing_bell_use",
+            () -> SoundEvent.createVariableRangeEvent(ResourceLocation.fromNamespaceAndPath(MODID, "sanqing_bell_use")));
 
     public static final DeferredHolder<MenuType<?>, MenuType<FollowerMenu>> FOLLOWER_MENU = MENUS.register("follower",
             () -> new MenuType<>((id, inv) -> new FollowerMenu(id, inv), FeatureFlags.VANILLA_SET));
 
     // 朱砂
-    public static final DeferredItem<Item> CINNABAR = ITEMS.registerItem("cinnabar", Item::new);
+    public static final DeferredItem<Item> CINNABAR = ITEMS.registerItem("cinnabar",
+            properties -> new CinnabarItem(properties.stacksTo(64).component(DataComponents.LORE, new ItemLore(List.of(
+                    Component.translatable("item.taoist_with_15_dogs.cinnabar.desc").withStyle(ChatFormatting.RED)
+            )))));
 
     // 铜钱
-    public static final DeferredItem<Item> COPPER_COIN = ITEMS.registerItem("copper_coin", Item::new);
+    public static final DeferredItem<Item> COPPER_COIN = ITEMS.registerItem("copper_coin",
+            properties -> new Item(properties.stacksTo(64).component(DataComponents.LORE, new ItemLore(List.of(
+                    Component.translatable("item.taoist_with_15_dogs.copper_coin.desc").withStyle(ChatFormatting.GRAY)
+            )))));
 
     // 黄符
     public static final DeferredItem<Item> YELLOW_TALISMAN = ITEMS.registerItem("yellow_talisman",
-            properties -> new YellowTalismanItem(properties.stacksTo(54)));
+            properties -> new YellowTalismanItem(properties.stacksTo(54).component(DataComponents.LORE, new ItemLore(List.of(
+                    Component.translatable("item.taoist_with_15_dogs.yellow_talisman.desc").withStyle(ChatFormatting.GOLD)
+            )))));
     //三清铃
     public static final DeferredItem<Item> SANQING_BELL = ITEMS.registerItem("sanqing_bell",
-            properties -> new SanqingBellItem(properties.stacksTo(1)));
+            properties -> new SanqingBellItem(properties.stacksTo(1).component(DataComponents.LORE, new ItemLore(List.of(
+                    Component.translatable("item.taoist_with_15_dogs.sanqing_bell.desc").withStyle(ChatFormatting.AQUA)
+            )))));
 
     // 桃木剑
     public static final DeferredItem<Item> TAOIST_SWORD = ITEMS.registerItem("taoist_sword",
@@ -103,15 +122,15 @@ public class Taoistwith15dogs {
                     .durability(250)
                     .attributes(ItemAttributeModifiers.builder()
                             .add(Attributes.ATTACK_DAMAGE,
-                                    new AttributeModifier(Item.BASE_ATTACK_DAMAGE_ID, 3.5, AttributeModifier.Operation.ADD_VALUE),
+                                    new AttributeModifier(Item.BASE_ATTACK_DAMAGE_ID, 4.5, AttributeModifier.Operation.ADD_VALUE),
                                     EquipmentSlotGroup.MAINHAND)
                             .add(Attributes.ATTACK_SPEED,
                                     new AttributeModifier(Item.BASE_ATTACK_SPEED_ID, -1.5, AttributeModifier.Operation.ADD_VALUE),
                                     EquipmentSlotGroup.MAINHAND)
                             .build())
                     .component(DataComponents.LORE, new ItemLore(List.of(
-                            Component.translatable("item.taoist_with_15_dogs.taoist_sword.lore1").withStyle(ChatFormatting.LIGHT_PURPLE),
-                            Component.translatable("item.taoist_with_15_dogs.taoist_sword.lore2").withStyle(ChatFormatting.DARK_RED)
+                            Component.translatable("item.taoist_with_15_dogs.taoist_sword.desc").withStyle(ChatFormatting.LIGHT_PURPLE),
+                            Component.translatable("item.taoist_with_15_dogs.taoist_sword.desc2").withStyle(ChatFormatting.DARK_RED)
                     )))
             ));
 
@@ -119,15 +138,19 @@ public class Taoistwith15dogs {
     public static final DeferredItem<Item> COPPER_COIN_SWORD = ITEMS.registerItem("copper_coin_sword",
             properties -> new CopperCoinSwordItem(properties
                     .stacksTo(1)
-                    .durability(200)
+                    .durability(300)
                     .attributes(ItemAttributeModifiers.builder()
                             .add(Attributes.ATTACK_DAMAGE,
-                                    new AttributeModifier(Item.BASE_ATTACK_DAMAGE_ID, 5.5, AttributeModifier.Operation.ADD_VALUE),
+                                    new AttributeModifier(Item.BASE_ATTACK_DAMAGE_ID, 6.5, AttributeModifier.Operation.ADD_VALUE),
                                     EquipmentSlotGroup.MAINHAND)
                             .add(Attributes.ATTACK_SPEED,
                                     new AttributeModifier(Item.BASE_ATTACK_SPEED_ID, -2.0, AttributeModifier.Operation.ADD_VALUE),
                                     EquipmentSlotGroup.MAINHAND)
                             .build())
+                    .component(DataComponents.LORE, new ItemLore(List.of(
+                            Component.translatable("item.taoist_with_15_dogs.copper_coin_sword.desc").withStyle(ChatFormatting.GRAY),
+                            Component.translatable("item.taoist_with_15_dogs.copper_coin_sword.desc2").withStyle(ChatFormatting.DARK_AQUA)
+                    )))
             ));
 
     // 投掷铜钱剑实体
@@ -143,26 +166,38 @@ public class Taoistwith15dogs {
             BlockBehaviour.Properties.ofFullCopy(Blocks.OAK_PLANKS));
 
     // 方块物品
-    public static final DeferredItem<BlockItem> LIGHTNING_WOOD_ITEM = ITEMS.registerSimpleBlockItem(LIGHTNING_WOOD);
-    public static final DeferredItem<BlockItem> LIGHTNING_PLANKS_ITEM = ITEMS.registerSimpleBlockItem(LIGHTNING_PLANKS);
+    public static final DeferredItem<BlockItem> LIGHTNING_WOOD_ITEM = ITEMS.registerItem("lightning_wood",
+            properties -> new BlockItem(LIGHTNING_WOOD.get(), properties.component(DataComponents.LORE, new ItemLore(List.of(
+                    Component.translatable("block.taoist_with_15_dogs.lightning_wood.desc").withStyle(ChatFormatting.DARK_PURPLE)
+            )))));
+    public static final DeferredItem<BlockItem> LIGHTNING_PLANKS_ITEM = ITEMS.registerItem("lightning_planks",
+            properties -> new BlockItem(LIGHTNING_PLANKS.get(), properties.component(DataComponents.LORE, new ItemLore(List.of(
+                    Component.translatable("block.taoist_with_15_dogs.lightning_planks.desc").withStyle(ChatFormatting.DARK_PURPLE)
+            )))));
 
     // 八卦镜
     public static final DeferredItem<Item> BAGUA_MIRROR = ITEMS.registerItem("bagua_mirror",
-            properties -> new BaguaMirrorItem(properties.stacksTo(1)));
+            properties -> new BaguaMirrorItem(properties.stacksTo(1).component(DataComponents.LORE, new ItemLore(List.of(
+                    Component.translatable("item.taoist_with_15_dogs.bagua_mirror.desc").withStyle(ChatFormatting.DARK_GREEN)
+            )))));
 
     // 雷电桃木剑
     public static final DeferredItem<Item> LIGHTNING_TAOIST_SWORD = ITEMS.registerItem("lightning_taoist_sword",
             properties -> new LightningTaoistSwordItem(properties
                     .stacksTo(1)
-                    .durability(500)
                     .attributes(ItemAttributeModifiers.builder()
                             .add(Attributes.ATTACK_DAMAGE,
-                                    new AttributeModifier(Item.BASE_ATTACK_DAMAGE_ID, 8.5, AttributeModifier.Operation.ADD_VALUE),
+                                    new AttributeModifier(Item.BASE_ATTACK_DAMAGE_ID, 9.5, AttributeModifier.Operation.ADD_VALUE),
                                     EquipmentSlotGroup.MAINHAND)
                             .add(Attributes.ATTACK_SPEED,
                                     new AttributeModifier(Item.BASE_ATTACK_SPEED_ID, -1.5, AttributeModifier.Operation.ADD_VALUE),
                                     EquipmentSlotGroup.MAINHAND)
-                            .build())));
+                            .build())
+                    .component(DataComponents.LORE, new ItemLore(List.of(
+                            Component.translatable("item.taoist_with_15_dogs.lightning_taoist_sword.desc").withStyle(ChatFormatting.YELLOW),
+                            Component.translatable("item.taoist_with_15_dogs.lightning_taoist_sword.desc2").withStyle(ChatFormatting.DARK_RED)
+                    )))
+            ));
 
     // 创造模式标签页
     @SuppressWarnings("unused")
@@ -189,21 +224,10 @@ public class Taoistwith15dogs {
         ENTITY_TYPES.register(modEventBus);
         CREATIVE_MODE_TABS.register(modEventBus);
         MENUS.register(modEventBus);
+        SOUND_EVENTS.register(modEventBus);
 
-        modEventBus.addListener(this::commonSetup);
         modEventBus.addListener(this::registerPayloads);
         NeoForge.EVENT_BUS.register(this);
-
-        modContainer.registerConfig(ModConfig.Type.COMMON, Config.SPEC);
-    }
-
-    private void commonSetup(FMLCommonSetupEvent event) {
-        LOGGER.info("HELLO FROM COMMON SETUP");
-        if (Config.LOG_DIRT_BLOCK.getAsBoolean()) {
-            LOGGER.info("DIRT BLOCK >> {}", BuiltInRegistries.BLOCK.getKey(Blocks.DIRT));
-        }
-        LOGGER.info("{}{}", Config.MAGIC_NUMBER_INTRODUCTION.get(), Config.MAGIC_NUMBER.getAsInt());
-        Config.ITEM_STRINGS.get().forEach(item -> LOGGER.info("ITEM >> {}", item));
     }
 
     private void registerPayloads(RegisterPayloadHandlersEvent event) {
@@ -217,7 +241,27 @@ public class Taoistwith15dogs {
 
     @SubscribeEvent
     public void onServerStarting(ServerStartingEvent event) {
-        LOGGER.info("HELLO from server starting");
+    }
+
+    @SubscribeEvent
+    public void onLightningJoin(EntityJoinLevelEvent event) {
+        if (!(event.getEntity() instanceof LightningBolt)) return;
+        if (!(event.getLevel() instanceof ServerLevel level)) return;
+
+        BlockPos center = event.getEntity().blockPosition();
+        int radius = 3;
+        for (int x = -radius; x <= radius; x++) {
+            for (int y = -radius; y <= radius; y++) {
+                for (int z = -radius; z <= radius; z++) {
+                    BlockPos pos = center.offset(x, y, z);
+                    BlockState state = level.getBlockState(pos);
+                    if (state.is(Blocks.CHERRY_LOG) || state.is(Blocks.CHERRY_WOOD)) {
+                        level.setBlock(pos, LIGHTNING_WOOD.get().defaultBlockState()
+                                .setValue(RotatedPillarBlock.AXIS, state.getValue(RotatedPillarBlock.AXIS)), 3);
+                    }
+                }
+            }
+        }
     }
 
     @SubscribeEvent
@@ -233,6 +277,10 @@ public class Taoistwith15dogs {
                     && !isRetaliation(golem, mob)) {
                 event.setNewAboutToBeSetTarget(null);
             }
+            return;
+        }
+        if (newTarget instanceof Player player && BaguaMirrorItem.isHoldingMirror(player) && entity.getType().is(net.minecraft.tags.EntityTypeTags.UNDEAD)) {
+            event.setNewAboutToBeSetTarget(null);
             return;
         }
         if (!(entity instanceof Mob mob)) {
@@ -319,6 +367,7 @@ public class Taoistwith15dogs {
         if (ownerPlayer == null) {
             return;
         }
+        TalismanControl.removeSunGoals(mob);
         if (mob instanceof WitherSkeleton) {
             TalismanControl.tickWitherSkeletonDig(mob);
         } else {
@@ -339,12 +388,20 @@ public class Taoistwith15dogs {
                 TalismanControl.clearCommandTargetTags(mob);
                 mob.setTarget(null);
             }
-            // 无目标: 跟随主人, 近距离停防挤
-            double distanceSqr = mob.distanceToSqr(ownerPlayer);
-            if (distanceSqr > 64.0) {
-                mob.getNavigation().moveTo(ownerPlayer, 1.1);
-            } else if (distanceSqr < 16.0) {
-                mob.getNavigation().stop();
+            // 无目标: 每tick刷新路径, 强行跟随主人
+            {
+                double distanceSqr = mob.distanceToSqr(ownerPlayer);
+                if (distanceSqr > 9.0) {
+                    double speed = distanceSqr > 256.0 ? 1.3 : 1.1;
+                    mob.getNavigation().moveTo(ownerPlayer, speed);
+                    if (distanceSqr > 1024.0 && level instanceof ServerLevel sl) {
+                        mob.moveTo(ownerPlayer.getX(), ownerPlayer.getY(), ownerPlayer.getZ(), mob.getYRot(), mob.getXRot());
+                        mob.getNavigation().stop();
+                    }
+                } else {
+                    mob.getNavigation().stop();
+                    mob.getLookControl().setLookAt(ownerPlayer, 30.0F, 30.0F);
+                }
             }
         } else {
             // 有目标: 攻击模式, 不禁用寻路 → OpenDoorGoal可开门
@@ -428,7 +485,7 @@ public class Taoistwith15dogs {
         event.setCanceled(true);
         player.openMenu(new SimpleMenuProvider(
                 (containerId, playerInventory, p) -> FollowerMenu.createServerMenu(containerId, playerInventory, mob),
-                Component.translatable("container.taoist_with_15_dogs.follower")
+                mob.getType().getDescription().copy().append(" - ").append(Component.translatable("container.taoist_with_15_dogs.follower"))
         ));
     }
 

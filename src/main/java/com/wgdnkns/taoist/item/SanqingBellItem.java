@@ -2,6 +2,7 @@ package com.wgdnkns.taoist.item;
 
 import com.wgdnkns.taoist.Taoistwith15dogs;
 import net.minecraft.network.chat.Component;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResultHolder;
 import net.minecraft.world.entity.Entity;
@@ -51,8 +52,12 @@ public class SanqingBellItem extends Item {
     @Override
     public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
         ItemStack stack = player.getItemInHand(hand);
+
+        level.playSound(null, player.getX(), player.getY(), player.getZ(),
+                Taoistwith15dogs.SANQING_BELL_SOUND.get(), SoundSource.PLAYERS, 1.0F, 1.0F);
+
         if (level.isClientSide) {
-            return InteractionResultHolder.pass(stack);
+            return InteractionResultHolder.success(stack);
         }
 
         HitResult hit = ProjectileUtil.getHitResultOnViewVector(player,

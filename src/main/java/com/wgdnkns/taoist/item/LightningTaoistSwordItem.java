@@ -8,7 +8,6 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResultHolder;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.EntityType;
-import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.LightningBolt;
 import net.minecraft.world.entity.player.Player;
@@ -16,6 +15,7 @@ import net.minecraft.world.entity.projectile.ProjectileUtil;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.UseAnim;
+import net.minecraft.world.item.enchantment.Enchantments;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.HitResult;
@@ -26,6 +26,30 @@ public class LightningTaoistSwordItem extends Item {
 
     public LightningTaoistSwordItem(Properties properties) {
         super(properties);
+    }
+
+    @Override
+    public int getEnchantmentValue() {
+        return 15;
+    }
+
+    @Override
+    public boolean isEnchantable(ItemStack stack) {
+        return true;
+    }
+
+    @Override
+    public boolean isBookEnchantable(ItemStack stack, ItemStack book) {
+        var data = book.get(net.minecraft.core.component.DataComponents.STORED_ENCHANTMENTS);
+        if (data != null) {
+            for (var entry : data.entrySet()) {
+                var enchantment = entry.getKey();
+                if (enchantment.is(Enchantments.UNBREAKING) || enchantment.is(Enchantments.MENDING)) {
+                    return false;
+                }
+            }
+        }
+        return super.isBookEnchantable(stack, book);
     }
 
     @Override
@@ -65,10 +89,10 @@ public class LightningTaoistSwordItem extends Item {
                 lightning.moveTo(target.getX(), target.getY(), target.getZ());
                 serverLevel.addFreshEntity(lightning);
             }
+            target.hurt(serverLevel.damageSources().lightningBolt(), 20.0F);
             level.playSound(null, target.getX(), target.getY(), target.getZ(), SoundEvents.TRIDENT_THUNDER, SoundSource.WEATHER, 5.0F, 1.0F);
         }
 
-        stack.hurtAndBreak(1, player, LivingEntity.getSlotForHand(hand));
         player.getCooldowns().addCooldown(this, COOLDOWN_TICKS);
         player.swing(hand, true);
         return InteractionResultHolder.consume(stack);
@@ -77,13 +101,13 @@ public class LightningTaoistSwordItem extends Item {
     @Override
     public boolean hurtEnemy(ItemStack stack, LivingEntity target, LivingEntity attacker) {
         if (target.getType().is(EntityTypeTags.UNDEAD)) {
-            target.hurt(attacker.damageSources().mobAttack(attacker), 8.5F);
+            target.hurt(attacker.damageSources().mobAttack(attacker), 10.5F);
         }
         return true;
     }
 
     @Override
-    public void postHurtEnemy(ItemStack stack, LivingEntity target, LivingEntity attacker) {
-        stack.hurtAndBreak(1, attacker, EquipmentSlot.MAINHAND);
+    public boolean isDamageable(ItemStack stack) {
+        return false;
     }
 }

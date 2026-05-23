@@ -8,6 +8,8 @@ import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.ai.goal.FleeSunGoal;
+import net.minecraft.world.entity.ai.goal.RestrictSunGoal;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
@@ -41,6 +43,7 @@ public final class TalismanControl {
     public static final String COMMAND_TARGET_TAG_PREFIX = "taoist_with_15_dogs_cmd_";
     public static final String SELECTED_FOLLOWER_TAG = "taoist_with_15_dogs_selected_follower";
     public static final String DOOR_GOAL_TAG = "taoist_with_15_dogs_open_door";
+    public static final String SUN_GOAL_REMOVED_TAG = "taoist_with_15_dogs_sun_removed";
     public static final String TALISMAN_SLOT_TAG = "taoist_with_15_dogs_talisman_item";
     public static final String INVENTORY_TAG = "taoist_with_15_dogs_inventory";
     private static final String DIG_LAST_BREAK_TICK = "taoist_with_15_dogs_dig_last_break";
@@ -210,6 +213,15 @@ public final class TalismanControl {
         }
         mob.goalSelector.addGoal(1, new OpenDoorGoal(mob, true));
         mob.addTag(DOOR_GOAL_TAG);
+    }
+
+    public static void removeSunGoals(Mob mob) {
+        if (mob.getTags().contains(SUN_GOAL_REMOVED_TAG)) return;
+        mob.goalSelector.getAvailableGoals().removeIf(wrapper -> {
+            var goal = wrapper.getGoal();
+            return goal instanceof FleeSunGoal || goal instanceof RestrictSunGoal;
+        });
+        mob.addTag(SUN_GOAL_REMOVED_TAG);
     }
 
     @SuppressWarnings("resource")

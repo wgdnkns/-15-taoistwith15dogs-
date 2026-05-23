@@ -29,15 +29,15 @@ public class BaguaMirrorItem extends Item {
         if (!(level instanceof ServerLevel serverLevel)) return;
 
         for (Mob mob : serverLevel.getEntitiesOfClass(Mob.class, player.getBoundingBox().inflate(FEAR_RANGE))) {
-            if (mob.getType().is(EntityTypeTags.UNDEAD)) {
-                mob.setTarget(null);
-                mob.getNavigation().moveTo(
-                        mob.getX() + (mob.getX() - player.getX()) * 2,
-                        mob.getY(),
-                        mob.getZ() + (mob.getZ() - player.getZ()) * 2,
-                        1.5
-                );
-            }
+            if (!mob.getType().is(EntityTypeTags.UNDEAD)) continue;
+            if (mob.getTags().contains(TalismanControl.TALISMAN_TAG)) continue;
+            mob.setTarget(null);
+            mob.getNavigation().moveTo(
+                    mob.getX() + (mob.getX() - player.getX()) * 2,
+                    mob.getY(),
+                    mob.getZ() + (mob.getZ() - player.getZ()) * 2,
+                    1.5
+            );
         }
     }
 }

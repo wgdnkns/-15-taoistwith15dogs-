@@ -13,6 +13,11 @@ public class TaoistSwordItem extends Item {
     }
 
     @Override
+    public int getEnchantmentValue() {
+        return 15;
+    }
+
+    @Override
     public boolean hurtEnemy(ItemStack stack, LivingEntity target, LivingEntity attacker) {
         if (target.getType().is(EntityTypeTags.UNDEAD)) {
             target.hurt(attacker.damageSources().mobAttack(attacker), EXTRA_UNDEAD_DAMAGE);

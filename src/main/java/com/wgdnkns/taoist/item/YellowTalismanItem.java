@@ -1,9 +1,9 @@
 package com.wgdnkns.taoist.item;
 
-import com.wgdnkns.taoist.Taoistwith15dogs;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
+import net.minecraft.network.chat.Component;
 import net.minecraft.tags.EntityTypeTags;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
@@ -32,8 +32,7 @@ public class YellowTalismanItem extends Item {
         }
         ItemStack currentTalisman = TalismanControl.getTalismanItem(mob);
         boolean hasOtherInPersist = !currentTalisman.isEmpty() && !currentTalisman.is(this);
-        boolean hasOtherInHead = !mob.getItemBySlot(EquipmentSlot.HEAD).isEmpty() && !mob.getItemBySlot(EquipmentSlot.HEAD).is(this);
-        if (hasOtherInPersist || hasOtherInHead) {
+        if (hasOtherInPersist) {
             return InteractionResult.PASS;
         }
         if (TalismanControl.isControlledByAnyPlayer(mob, this)) {
@@ -52,7 +51,6 @@ public class YellowTalismanItem extends Item {
 
         TalismanControl.setTalismanItem(mob, placed);
 
-        // 保存生物自带的装备到背包（先读取已有内容, 再补充）
         var data = mob.getPersistentData();
         ListTag existingList = new ListTag();
         if (data.contains(TalismanControl.INVENTORY_TAG, Tag.TAG_LIST)) {
@@ -61,19 +59,25 @@ public class YellowTalismanItem extends Item {
             for (int i = 0; i < 27; i++) existingList.add(new CompoundTag());
         }
 
-        // 把黄符放进第一个空位
+        boolean foundSlot = false;
         for (int i = 0; i < existingList.size(); i++) {
             if (existingList.getCompound(i).isEmpty()) {
+                existingList.set(i, placed.save(mob.registryAccess()));
+                foundSlot = true;
+                break;
+            }
+        }
+        if (!foundSlot) {
+            for (int i = 0; i < existingList.size(); i++) {
                 existingList.set(i, placed.save(mob.registryAccess()));
                 break;
             }
         }
 
-        // 把生物当前装备（弓/盔甲等）也存进去, 如果背包里还没有的话
         for (var slot : EquipmentSlot.values()) {
             var eq = mob.getItemBySlot(slot);
             if (eq.isEmpty()) continue;
-            if (eq.getItem() instanceof YellowTalismanItem) continue; // 黄符不存
+            if (eq.getItem() instanceof YellowTalismanItem) continue;
             boolean found = false;
             for (int i = 0; i < existingList.size(); i++) {
                 var tag = existingList.getCompound(i);
@@ -101,6 +105,8 @@ public class YellowTalismanItem extends Item {
         mob.addTag(TalismanControl.ownerTag(player.getUUID()));
         TalismanControl.applyBuffs(mob);
         mob.setTarget(null);
+        mob.setCustomName(Component.literal("§e✦ 控制 ✦"));
+        mob.setCustomNameVisible(true);
         return InteractionResult.CONSUME;
     }
 }

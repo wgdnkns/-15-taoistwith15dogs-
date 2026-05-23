@@ -10,8 +10,6 @@ import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.RenderStateShard;
 import net.minecraft.client.renderer.entity.EntityRenderers;
-import net.minecraft.client.renderer.entity.ItemRenderer;
-import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.core.particles.DustParticleOptions;
 import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
@@ -19,7 +17,6 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.entity.projectile.ProjectileUtil;
 import net.minecraft.world.phys.EntityHitResult;
@@ -66,7 +63,7 @@ public class Taoistwith15dogsClient {
         }, Taoistwith15dogs.LIGHTNING_TAOIST_SWORD.get());
 
         event.register((stack, tintIndex) -> {
-            return 0xB3FFFFFF;
+            return 0xFFFFD700;
         }, Taoistwith15dogs.YELLOW_TALISMAN.get());
     }
 
@@ -233,7 +230,6 @@ public class Taoistwith15dogsClient {
         }
         withContext(context -> {
             renderArrow(event, context);
-            renderTalismansOnHeads(event, context);
         });
     }
 
@@ -307,41 +303,6 @@ public class Taoistwith15dogsClient {
         poseStack.popPose();
     }
 
-    private static void renderTalismansOnHeads(RenderLevelStageEvent event, ClientContext context) {
-        Vec3 camPos = event.getCamera().getPosition();
-        float partial = event.getPartialTick().getGameTimeDeltaPartialTick(true);
-        Minecraft mc = context.minecraft();
-        ItemRenderer itemRenderer = mc.getItemRenderer();
-        ItemStack talismanStack = new ItemStack(Taoistwith15dogs.YELLOW_TALISMAN.get());
-        var bufferSource = mc.renderBuffers().bufferSource();
-        PoseStack poseStack = event.getPoseStack();
-
-        // 完全光照: (天空15<<20)|(方块15<<4) = 15728880
-        int fullBright = 15728880;
-
-        for (Mob mob : context.level().getEntitiesOfClass(Mob.class, context.player().getBoundingBox().inflate(COMMAND_RANGE))) {
-            if (!mob.getTags().contains(TalismanControl.TALISMAN_TAG)) continue;
-            if (!mob.isAlive()) continue;
-
-            Vec3 pos = mob.getPosition(partial);
-            // 在脸部正前方 (眼睛高度 + 前推半格)
-            double y = pos.y + mob.getEyeHeight();
-
-            poseStack.pushPose();
-            poseStack.translate(pos.x - camPos.x, y - camPos.y, pos.z - camPos.z);
-
-            // 始终面向摄像机 (billboard)
-            poseStack.mulPose(event.getCamera().rotation());
-            // 在脸部前方 (Z轴朝向摄像机, -Z = 前进)
-            poseStack.translate(0.0, 0.0, -0.35);
-            poseStack.scale(0.5F, 0.5F, 0.5F);
-
-            itemRenderer.renderStatic(talismanStack, ItemDisplayContext.FIXED, fullBright, OverlayTexture.NO_OVERLAY, poseStack, bufferSource, mc.level, 0);
-
-            poseStack.popPose();
-        }
-        bufferSource.endBatch();
-    }
 
     private static void drawSolidDownArrow(PoseStack poseStack,
                                            VertexConsumer buffer,
